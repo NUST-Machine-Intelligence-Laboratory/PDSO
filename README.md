@@ -2,7 +2,7 @@
 # Network Architecture
 The architecture of our proposed approach is as follows
 
-![image](Overall.png)
+![image](overall.png)
 
 We first propose a denoising-based feature fine-tuning (DFF) module to fine-tune the unsupervised pre-trained backbone with potential clean samples for more robust category-related representations.  Then, a clustering-based sample denoising (CSD) module is proposed to obtain the denoised large-scale data for more representative centers to improve the reliability of the pixel-level label assignment. Moreover, we propose a SAM prompt optimization (SPO) module to exploit the SAM mask with both point and bounding box prompts for the active categories to further refine the object boundaries in pseudo-labels.
 
@@ -46,7 +46,7 @@ python -m pip install scipy
 python -m pip install matplotlib
 pip3 install torch torchvision torchaudio
 ```
-#Train
+# Train
 We give the training details in [train.sh](./train.sh).
-#Results on the ImageNet-S50 and ImageNet-S300 datasets
+# Results on the ImageNet-S50 and ImageNet-S300 datasets
 ![image](result.png)

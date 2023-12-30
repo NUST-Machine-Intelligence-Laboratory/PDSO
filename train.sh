@@ -1,51 +1,35 @@
-# Usage of PDSO
+CUDA='0,1,2,3,4,5,6,7'
+N_GPU=8
+BATCH=256
+DATA=/data/ImageNetS/ImageNetS50
+IMAGENETS=/data/ImageNetS/ImageNetS50
 
-<div id="1"></div>
+DUMP_PATH=./weights/pass50
+DUMP_PATH_FINETUNE=${DUMP_PATH}/pixel_attention
+DUMP_PATH_FINETUNE_1=${DUMP_PATH}/pixel_attention_1
+DUMP_PATH_FINETUNE_2=${DUMP_PATH}/pixel_attention_2
+DUMP_PATH_classification=${DUMP_PATH}/pixel_classification
+DUMP_PATH_classification1=${DUMP_PATH}/pixel_classification1
+DUMP_PATH_classification2=${DUMP_PATH}/pixel_classification2
+DUMP_PATH_csd=${DUMP_PATH}pixel_csd
+DUMP_PATH_SEG=${DUMP_PATH}/pixel_finetuning_1
+DUMP_PATH_SEG_2=${DUMP_PATH}/pixel_finetuning_2
 
-# Installation
-#There are two environmental requirements for this model:
-# 1、Exclusive environment for performing CRF operations
-* System: **Linux**(e.g. Ubuntu/CentOS/Arch), **macOS**, or **Windows Subsystem of Linux (WSL)**
-* Python version == 3.6
-* CPU compiler (require at least one of the following)
-    * g++ (>=5.4.0)
-    * clang (>=8.0)
+QUEUE_LENGTH=2048
+QUEUE_LENGTH_PIXELATT=3840
+HIDDEN_DIM=512
+NUM_PROTOTYPE=500
+ARCH=resnet18
+NUM_CLASSES=50
+EPOCH=400
+EPOCH_PIXELATT=20
+EPOCH_SEG=20
+FREEZE_PROTOTYPES=1001
+FREEZE_PROTOTYPES_PIXELATT=0
 
-```shell
-python -m pip install tqdm
-python -m pip install pillow
-python -m pip install opencv-python
-python -m pip install pydensecrf
-python -m pip install scikit-image
-python -m pip install multiprocess
-```
+mkdir -p ${DUMP_PATH_FINETUNE}
+mkdir -p ${DUMP_PATH_SEG}
 
-* System: **Linux**(e.g. Ubuntu/CentOS/Arch), **macOS**, or **Windows Subsystem of Linux (WSL)**
-* Python version >= 3.7
-* CPU compiler (require at least one of the following)
-    * g++ (>=5.4.0)
-    * clang (>=8.0)
-
-
-[Jittor install](https://github.com/Jittor/jittor#install)
-
-```shell
-python -m pip install scikit-learn
-python -m pip install pandas
-python -m pip install munkres
-python -m pip install tqdm
-python -m pip install pillow
-python -m pip install opencv-python
-python -m pip install faiss-gpu
-python -m pip install scipy
-python -m pip install matplotlib
-pip3 install torch torchvision torchaudio
-```
-
-We provide training scripts [train.sh](./train.sh)
-
-## 1.Unsupervised representation learning
-```shell
 CUDA_VISIBLE_DEVICES=${CUDA} mpirun -np ${N_GPU} --allow-run-as-root python main_pretrain.py \
 --arch ${ARCH} \
 --data_path ${DATA}/train \
@@ -74,9 +58,7 @@ CUDA_VISIBLE_DEVICES=${CUDA} mpirun -np ${N_GPU} --allow-run-as-root python main
 --seed 31 \
 --shallow 3 \
 --weights 1 1
-```
-## 2.Pixel-label Generation with Pixel-Attention
-```shell
+
 CUDA_VISIBLE_DEVICES=${CUDA} mpirun -np ${N_GPU} --allow-run-as-root python main_pixel_attention.py \
 --arch ${ARCH} \
 --data_path ${IMAGENETS}/train \
@@ -104,43 +86,37 @@ CUDA_VISIBLE_DEVICES=${CUDA} mpirun -np ${N_GPU} --allow-run-as-root python main
 --workers 10 \
 --seed 31 \
 --pretrained ${DUMP_PATH}/checkpoint.pth.tar
-```
-## 3.Clustering
-Three cluster centers are used in total
-###Cluster centers1
-```shell
+
+
+#Three cluster centers are used in total
+#cluster centers1
 CUDA_VISIBLE_DEVICES=${CUDA} python cluster.py -a ${ARCH} \
 --pretrained ${DUMP_PATH_FINETUNE}/checkpoint.pth.tar \
 --data_path ${IMAGENETS}/train \
 --dump_path ${DUMP_PATH_FINETUNE} \
 -c 50 \
 --seed 31
-```
 
-###Cluster centers2
-The pretraining weights for clustering are obtained based on the DFF
-```shell
+#cluster centers2
+#The pretraining weights for clustering are obtained based on the DFF
 CUDA_VISIBLE_DEVICES=${CUDA} python cluster.py -a ${ARCH} \
 --pretrained ${DUMP_PATH_classification2}/ckp-.pth.tar \
 --data_path ${IMAGENETS}/train \
 --dump_path ${DUMP_PATH_FINETUNE_1} \
 -c 50 \
 --seed 31
-```
-###Cluster centers3
-The dataset train_csd is obtained by filtering and resampling trains based on CSD
-```shell
+
+#cluster centers3
+#The dataset train_csd is obtained by filtering and resampling trains based on CSD
 CUDA_VISIBLE_DEVICES=${CUDA} python cluster.py -a ${ARCH} \
 --pretrained ${DUMP_PATH_classification2}/ckp-.pth.tar \
 --data_path ${DUMP_PATH_csd}/train_csd \
 --dump_path ${DUMP_PATH_FINETUNE_2} \
  -c 50 \
  --seed 31
-```
 
-##4.Training classification networks using image level pseudo labels
-The classification network f
-```shell
+#DFF
+#the classification network f
 CUDA_VISIBLE_DEVICES=${CUDA} python classification.py --arch ${ARCH} \
 --pretrained ${DUMP_PATH_FINETUNE}/checkpoint.pth.tar  \
 --data_path ${IMAGENETS}/train \
@@ -154,12 +130,10 @@ CUDA_VISIBLE_DEVICES=${CUDA} python classification.py --arch ${ARCH} \
 --warmup_epochs 0 \
 --workers 8 \
 --num_classes 50
-```
 
-The classification network g
 
-The dataset train_S is a small loss sample selected by the network f and train_S.txt is the corresponding pseudo label
-```shell
+#the classification network g
+#The dataset train_S is a small loss sample selected by the network f and train_S.txt is the corresponding pseudo label
 CUDA_VISIBLE_DEVICES=${CUDA} python classification.py --arch ${ARCH} \
 --pretrained ${DUMP_PATH_FINETUNE}/checkpoint.pth.tar  \
 --data_path ${DUMP_PATH_classification}/sample_select/train_S \
@@ -173,9 +147,8 @@ CUDA_VISIBLE_DEVICES=${CUDA} python classification.py --arch ${ARCH} \
 --warmup_epochs 0 \
 --workers 8 \
 --num_classes 50
-```
-Infer training set labels
-```shell
+
+#Infer training set labels
 CUDA_VISIBLE_DEVICES=${CUDA} python inference_classification.py \
 --a ${ARCH} \
 --pretrained ${DUMP_PATH_classification}/checkpoints/ckp-36.pth.tar \
@@ -183,11 +156,9 @@ CUDA_VISIBLE_DEVICES=${CUDA} python inference_classification.py \
 --dump_path  ${DUMP_PATH_classification} \
 -c 50 \
 --mode train
-```
-The classification network h
 
-The dataset train_S2 is a small loss sample selected by the network g and train_S2.txt is the corresponding pseudo label
-```shell
+#the classification network h
+#The dataset train_S2 is a small loss sample selected by the network g and train_S2.txt is the corresponding pseudo label
 CUDA_VISIBLE_DEVICES=${CUDA} python classification_clu.py --arch ${ARCH} \
 --pretrained ${DUMP_PATH_FINETUNE}/checkpoint.pth.tar  \
 --data_path ${DUMP_PATH_classification1}/sample_select/train_S2 \
@@ -201,10 +172,11 @@ CUDA_VISIBLE_DEVICES=${CUDA} python classification_clu.py --arch ${ARCH} \
 --warmup_epochs 0 \
 --workers 8 \
 --num_classes 50
-```
-##5.Choose the threshold for generating pseudo-labels.
-```shell
-Evaluating the pseudo labels on the validation set.
+
+
+
+
+##### Evaluating the pseudo labels on the validation set.
 CUDA_VISIBLE_DEVICES=0 python inference_pixel_attention.py -a resnet18 \
 --pretrained ${DUMP_PATH_classification2}/ckp-.pth.tar \
 --data_path ${IMAGENETS} \
@@ -223,9 +195,8 @@ CUDA_VISIBLE_DEVICES=0 python evaluator.py \
 --curve \
 --min 20 \
 --max 80
-```
-##6.Generating pseudo-labels for the training set
-```shell
+
+
 CUDA_VISIBLE_DEVICES=${CUDA}  python ./inference_pixel_attention_1.py -a ${ARCH} \
 --pretrained ${DUMP_PATH_classification2}/ckp-.pth.tar \
 --data_path ${IMAGENETS} \
@@ -237,13 +208,9 @@ CUDA_VISIBLE_DEVICES=${CUDA}  python ./inference_pixel_attention_1.py -a ${ARCH}
 --mode train \
 --centroid {DUMP_PATH_FINETUNE_2}/cluster/centroids.npy \
 -t 0.41
-```
-```shell
-python cat_txt.py
-```
 
-##7.Optimizing pseudo labels with SAM
-```shell
+python cat_txt.py
+
 CUDA_VISIBLE_DEVICES=0 python ./SAM-SPO-jittor/spo.py \
 --checkpoint ./SAM-jittor/checkpoint/sam_vit_b_01ec64.pth \
 --model vit_b \
@@ -255,9 +222,7 @@ CUDA_VISIBLE_DEVICES=0 python ./SAM-SPO-jittor/spo.py \
 --txt_path_class {DUMP_PATH_FINETUNE_2}/cluster/train_I_D_50.txt \
 --outputbox ./SAM-SPO-jittor/spo/train-box \
 --yz 0.8
-```
-## 8.Finetuning with pixel-level pseudo labels
-```shell
+
 CUDA_VISIBLE_DEVICES=${CUDA} mpirun -np ${N_GPU} --allow-run-as-root python main_pixel_finetuning.py \
 --arch ${ARCH} \
 --data_path ${DATA}/train \
@@ -272,9 +237,7 @@ CUDA_VISIBLE_DEVICES=${CUDA} mpirun -np ${N_GPU} --allow-run-as-root python main
 --num_classes ${NUM_CLASSES} \
 --pseudo_path ./SAM-SPO-jittor/spo/train \
 --pretrained ${DUMP_PATH}/checkpoint.pth.tar
-```
-## 9.Inference and evaluator
-```shell
+
 CUDA_VISIBLE_DEVICES=${CUDA} python inference.py -a ${ARCH} \
 --pretrained ${DUMP_PATH_SEG}/checkpoint.pth.tar \
 --data_path ${IMAGENETS} \
@@ -288,4 +251,3 @@ CUDA_VISIBLE_DEVICES=${CUDA} python evaluator.py \
 --data_path ${IMAGENETS} \
 -c ${NUM_CLASSES} \
 --mode validation
-```

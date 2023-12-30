@@ -12,8 +12,7 @@ DUMP_PATH_classification=${DUMP_PATH}/pixel_classification
 DUMP_PATH_classification1=${DUMP_PATH}/pixel_classification1
 DUMP_PATH_classification2=${DUMP_PATH}/pixel_classification2
 DUMP_PATH_csd=${DUMP_PATH}pixel_csd
-DUMP_PATH_SEG=${DUMP_PATH}/pixel_finetuning_1
-DUMP_PATH_SEG_2=${DUMP_PATH}/pixel_finetuning_2
+DUMP_PATH_SEG=${DUMP_PATH}/pixel_finetuning
 
 QUEUE_LENGTH=2048
 QUEUE_LENGTH_PIXELATT=3840
@@ -28,6 +27,12 @@ FREEZE_PROTOTYPES=1001
 FREEZE_PROTOTYPES_PIXELATT=0
 
 mkdir -p ${DUMP_PATH_FINETUNE}
+mkdir -p ${DUMP_PATH_FINETUNE_1}
+mkdir -p ${DUMP_PATH_FINETUNE_2}
+mkdir -p ${DUMP_PATH_classification}
+mkdir -p ${DUMP_PATH_classification1}
+mkdir -p ${DUMP_PATH_classification2}
+
 mkdir -p ${DUMP_PATH_SEG}
 
 CUDA_VISIBLE_DEVICES=${CUDA} mpirun -np ${N_GPU} --allow-run-as-root python main_pretrain.py \

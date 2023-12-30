@@ -1,5 +1,5 @@
-#Pseudo-label Denoising and SAM Optimization for Large-scale Unsupervised Semantic Segmentation
-#Network Architecture
+# Pseudo-label Denoising and SAM Optimization for Large-scale Unsupervised Semantic Segmentation
+# Network Architecture
 The architecture of our proposed approach is as follows
 
 ![image](Overall.png)

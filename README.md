@@ -1,3 +1,5 @@
+![image](Overall.png)
+
 # Usage of PDSO
 
 <div id="1"></div>
@@ -107,7 +109,8 @@ CUDA_VISIBLE_DEVICES=${CUDA} mpirun -np ${N_GPU} --allow-run-as-root python main
 ```
 ## 3.Clustering
 Three cluster centers are used in total
-###Cluster centers1
+
+Cluster centers1
 ```shell
 CUDA_VISIBLE_DEVICES=${CUDA} python cluster.py -a ${ARCH} \
 --pretrained ${DUMP_PATH_FINETUNE}/checkpoint.pth.tar \
@@ -117,7 +120,7 @@ CUDA_VISIBLE_DEVICES=${CUDA} python cluster.py -a ${ARCH} \
 --seed 31
 ```
 
-###Cluster centers2
+Cluster centers2
 The pretraining weights for clustering are obtained based on the DFF
 ```shell
 CUDA_VISIBLE_DEVICES=${CUDA} python cluster.py -a ${ARCH} \
@@ -127,7 +130,9 @@ CUDA_VISIBLE_DEVICES=${CUDA} python cluster.py -a ${ARCH} \
 -c 50 \
 --seed 31
 ```
-###Cluster centers3
+
+Cluster centers3
+
 The dataset train_csd is obtained by filtering and resampling trains based on CSD
 ```shell
 CUDA_VISIBLE_DEVICES=${CUDA} python cluster.py -a ${ARCH} \

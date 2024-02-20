@@ -40,15 +40,15 @@ class BasicBlock(nn.Module):
     __constants__ = ['downsample']
 
     def __init__(
-        self,
-        inplanes,
-        planes,
-        stride=1,
-        downsample=None,
-        groups=1,
-        base_width=64,
-        dilation=1,
-        norm_layer=None,
+            self,
+            inplanes,
+            planes,
+            stride=1,
+            downsample=None,
+            groups=1,
+            base_width=64,
+            dilation=1,
+            norm_layer=None,
     ):
         super().__init__()
         if norm_layer is None:
@@ -93,15 +93,15 @@ class Bottleneck(nn.Module):
     __constants__ = ['downsample']
 
     def __init__(
-        self,
-        inplanes,
-        planes,
-        stride=1,
-        downsample=None,
-        groups=1,
-        base_width=64,
-        dilation=1,
-        norm_layer=None,
+            self,
+            inplanes,
+            planes,
+            stride=1,
+            downsample=None,
+            groups=1,
+            base_width=64,
+            dilation=1,
+            norm_layer=None,
     ):
         super().__init__()
         if norm_layer is None:
@@ -192,6 +192,10 @@ class ResNet(nn.Module):
         self.padding = nn.ConstantPad2d(1, 0.0)
         self.num_classes = num_classes
         self.shallow = shallow
+        # print(hidden_mlp)
+        # print(num_classes)
+        self.fc = nn.Linear(512, 50)
+        self.fc_clu = nn.Linear(512, 50)
         if isinstance(self.shallow, int):
             self.shallow = [self.shallow]
 
@@ -204,7 +208,7 @@ class ResNet(nn.Module):
         if len(replace_stride_with_dilation) != 3:
             raise ValueError('replace_stride_with_dilation should be None '
                              'or a 3-element tuple, got {}'.format(
-                                 replace_stride_with_dilation))
+                replace_stride_with_dilation))
         self.groups = groups
         self.base_width = width_per_group
 
@@ -456,7 +460,7 @@ class ResNet(nn.Module):
             x = jt.normalize(x, dim=1, p=2)
 
         if self.prototypes is not None:
-            return x, nn.matmul_transpose(x, self.prototypes.weight.detach()) 
+            return x, nn.matmul_transpose(x, self.prototypes.weight.detach())
         return x
 
     def execute_head_pixel(self, x, gridq, gridk):
@@ -472,6 +476,12 @@ class ResNet(nn.Module):
     def execute(self, inputs, gridq=None, gridk=None, mode='train'):
         if mode == 'cluster':
             output = self.inference_cluster(inputs)
+            return output
+        elif mode == 'clssification':
+            output = self.inference_classification(inputs)
+            return output
+        elif mode == 'clssification_clu':
+            output = self.inference_classification_clu(inputs)
             return output
         elif mode == 'inference_pixel_attention':
             return self.inference_pixel_attention(inputs)
@@ -529,7 +539,7 @@ class ResNet(nn.Module):
         if self.shallow is not None:
             for i, stage in enumerate(self.shallow):
                 embedding_c_, output_c_ = self.execute_head_shallow(output_c[i],
-                                                                  stage=stage)
+                                                                    stage=stage)
                 embedding = jt.concat((embedding, embedding_c_))
                 output = jt.concat((output, output_c_))
         if self.train_mode == 'pixelattn':
@@ -540,8 +550,8 @@ class ResNet(nn.Module):
 
     def execute_pixel_attention(self, out, threshold=None):
         out = nn.interpolate(
-            out, 
-            size=(out.shape[2] * 4, out.shape[3] * 4), 
+            out,
+            size=(out.shape[2] * 4, out.shape[3] * 4),
             mode='bilinear')
         out = jt.normalize(out, dim=1, p=2)
         fg = self.fbg(out)
@@ -554,11 +564,40 @@ class ResNet(nn.Module):
 
         return out
 
+    def inference_classification_clu(self, x, threshold=None):
+
+        out = self.execute_backbone(x)
+        # print('out1',type(out))
+        out = nn.interpolate(
+            out,
+            size=(out.shape[2] * 4, out.shape[3] * 4),
+            mode='bilinear')
+        # print('out2', type(out))
+        nout = jt.normalize(out, dim=1, p=2)
+        # print('out3', type(nout))
+        fg = self.fbg(nout)
+        if threshold is not None:
+            fg[fg < threshold] = 0
+        out = out * fg
+        # print('out4', type(out))
+        out = self.avgpool(out)
+        out = jt.flatten(out, 1)
+        out = self.fc_clu(out)
+        return out
+
+    def inference_classification(self, x):
+        # print('进入cla')
+        out = self.execute_backbone(x)
+        out = self.avgpool(out)
+        out = jt.flatten(out, 1)
+        out = self.fc(out)
+        return out
+
     def inference_cluster(self, x, threshold=None):
         out = self.execute_backbone(x)
         out = nn.interpolate(
-            out, 
-            size=(out.shape[2] * 4, out.shape[3] * 4), 
+            out,
+            size=(out.shape[2] * 4, out.shape[3] * 4),
             mode='bilinear')
         nout = jt.normalize(out, dim=1, p=2)
         fg = self.fbg(nout)
@@ -575,8 +614,8 @@ class ResNet(nn.Module):
         out = self.execute_backbone(x)
 
         out = nn.interpolate(
-            out, 
-            size=(out.shape[2] * 4, out.shape[3] * 4), 
+            out,
+            size=(out.shape[2] * 4, out.shape[3] * 4),
             mode='bilinear')
         out_ = jt.normalize(out, dim=1, p=2)
         fg = self.fbg(out_)
@@ -591,7 +630,7 @@ class MultiPrototypes(nn.Module):
         self.nmb_heads = len(nmb_prototypes)
         for i, k in enumerate(nmb_prototypes):
             setattr(self, 'prototypes' + str(i),
-                            nn.Linear(output_dim, k, bias=False))
+                    nn.Linear(output_dim, k, bias=False))
 
     def execute(self, x):
         out = []
